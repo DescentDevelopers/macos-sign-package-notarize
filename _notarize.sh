@@ -44,4 +44,18 @@ echo ""
 echo "### Stapling notarization ticket to file $PATH_TO_FILE_TO_NOTARIZE"
 echo ""
 
-xcrun stapler staple "$PATH_TO_FILE_TO_NOTARIZE"
+# Stapling downloads the ticket from Apple's CloudKit server, and that connection is sometimes dropped, so retry it.
+STAPLE_ATTEMPTS=5
+for ATTEMPT in $(seq 1 $STAPLE_ATTEMPTS); do
+    if xcrun stapler staple "$PATH_TO_FILE_TO_NOTARIZE"; then
+        exit 0
+    fi
+
+    if [ "$ATTEMPT" -lt "$STAPLE_ATTEMPTS" ]; then
+        echo "Stapling attempt $ATTEMPT failed, retrying in $((ATTEMPT * 30)) seconds"
+        sleep $((ATTEMPT * 30))
+    fi
+done
+
+echo "Stapling failed after $STAPLE_ATTEMPTS attempts"
+exit 1
